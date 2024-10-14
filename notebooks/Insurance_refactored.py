@@ -2,26 +2,31 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import train_test_split, cross_val_score, cross_validate, StratifiedKFold, RandomizedSearchCV
 from sklearn.pipeline import Pipeline
-from sklearn.decomposition import TruncatedSVD
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, classification_report, ConfusionMatrixDisplay
-from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import make_scorer, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from imblearn.over_sampling import SMOTE
+from xgboost import XGBClassifier
+import joblib
 
-# Class for EDA tasks
+# Class for data exploration
 class DataExplorer:
     def __init__(self, data):
         self.data = data
-    
+
     def explore_data(self):
         print(self.data.head().T)
         print(self.data.describe())
         print(self.data.info())
         return self
-    
+
+    def plot_histograms(self):
+        self.data.hist(bins=20, figsize=(20, 15))
+        plt.suptitle('Histograms of Numerical Features')
+        plt.show()
+        return self
+
     def plot_distribution(self, target_column):
         plt.figure(figsize=(8, 4))
         sns.countplot(x=target_column, data=self.data, palette='bright')
@@ -37,64 +42,80 @@ class DataExplorer:
         plt.show()
         return self
 
-    def plot_histograms(self):
-        self.data.hist(bins=20, figsize=(20, 15))
-        plt.suptitle('Histograms of Numerical Features')
-        plt.show()
-        return self
-
-# Class for handling and modeling insurance data
+# Class for handling data preprocessing, modeling, and evaluation
 class InsuranceModel:
     def __init__(self, train_path, eval_path, target_path):
         self.train_path = train_path
         self.eval_path = eval_path
         self.target_path = target_path
-        self.model_pipeline = Pipeline([
-            ('scaler', StandardScaler()),
-            ('reduce_dim', TruncatedSVD(n_components=50)),
-            ('classifier', LogisticRegression(max_iter=1000))
-        ])
-        self.X_train, self.X_test, self.y_train, self.y_test = None, None, None, None
         self.train_data = None
-        self.eda_data = None
+        self.eval_data = None
+        self.target_data = None
+        self.X_train, self.X_test, self.y_train, self.y_test = None, None, None, None
+        self.best_model = None
 
     def load_data(self):
         self.train_data = pd.read_csv(self.train_path, sep='\t', header=None)
         self.eval_data = pd.read_csv(self.eval_path, sep='\t', header=None)
         self.target_data = pd.read_csv(self.target_path, sep='\t', header=None, names=['Target'])
-        # Copy for EDA
-        self.eda_data = self.train_data.copy()
-        return self
-
-    def rename_columns(self, new_column_names):
-        self.train_data.columns = new_column_names
-        self.eda_data.columns = new_column_names  # Sync columns for EDA
         return self
 
     def preprocess_data(self):
-        X = self.train_data.drop(columns=[85])  # Assuming CARAVAN is in column 85
-        y = self.train_data[85]
-        
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # Preprocessing: Define features and target
+        X = self.train_data[['MAANTHUI', 'MGEMOMV', 'MGEMLEEF', 'MOSHOOFD', 'MGODRK', 'MGODPR',
+                             'MGODOV', 'MGODGE', 'MRELGE', 'MRELSA', 'MRELOV', 'MFALLEEN',
+                             'MFGEKIND', 'MFWEKIND', 'MOPLHOOG', 'MOPLMIDD', 'MOPLLAAG',
+                             'MBERHOOG', 'MBERZELF', 'MBERMIDD', 'holds_policy']]
+        y = self.train_data['CARAVAN']
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, stratify=y)
         return self
-    
+
+    def handle_imbalance(self):
+        # Apply SMOTE to handle class imbalance
+        smote = SMOTE(random_state=42)
+        self.X_train, self.y_train = smote.fit_resample(self.X_train, self.y_train)
+        return self
+
     def train_model(self):
-        self.model_pipeline.fit(self.X_train, self.y_train)
+        param_grid = {
+            'model__n_estimators': [100, 200, 300],
+            'model__max_depth': [3, 5, 7],
+            'model__learning_rate': [0.01, 0.05, 0.1],
+            'model__subsample': [0.6, 0.8, 1.0],
+            'model__colsample_bytree': [0.6, 0.8, 1.0],
+            'model__gamma': [0, 0.1, 0.2],
+            'model__scale_pos_weight': [1, 3, 5]
+        }
+        
+        pipeline = Pipeline(steps=[('smote', SMOTE(random_state=42)), ('model', XGBClassifier(random_state=42))])
+        
+        random_search = RandomizedSearchCV(estimator=pipeline, param_distributions=param_grid, n_iter=50,
+                                           scoring='roc_auc', cv=5, verbose=1, random_state=42, n_jobs=-1)
+        random_search.fit(self.X_train, self.y_train)
+        self.best_model = random_search.best_estimator_
+        print("Best parameters found: ", random_search.best_params_)
         return self
 
     def evaluate_model(self):
-        y_pred = self.model_pipeline.predict(self.X_test)
-        cm = confusion_matrix(self.y_test, y_pred)
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-        disp.plot(cmap='Blues')
-        plt.show()
-
-        print(classification_report(self.y_test, y_pred))
+        y_pred = self.best_model.predict(self.X_test)
+        y_pred_proba = self.best_model.predict_proba(self.X_test)[:, 1]
+        
+        accuracy = accuracy_score(self.y_test, y_pred)
+        precision = precision_score(self.y_test, y_pred)
+        recall = recall_score(self.y_test, y_pred)
+        f1 = f1_score(self.y_test, y_pred)
+        auc = roc_auc_score(self.y_test, y_pred_proba)
+        
+        print(f"Accuracy: {accuracy:.4f}")
+        print(f"Precision: {precision:.4f}")
+        print(f"Recall: {recall:.4f}")
+        print(f"F1-Score: {f1:.4f}")
+        print(f"AUC-ROC: {auc:.4f}")
         return self
-    
-    def cross_validate_model(self):
-        scores = cross_val_score(self.model_pipeline, self.X_train, self.y_train, cv=5)
-        print("Average Cross-Validation Accuracy:", np.mean(scores))
+
+    def save_model(self, filename='xgboost_model.pkl'):
+        joblib.dump(self.best_model, filename)
+        print(f"Model saved as {filename}")
         return self
 
 # Main execution function
@@ -103,18 +124,18 @@ def main():
     eval_path = '../data/raw/eval/ticeval2000.txt'
     target_path = '../data/raw/eval/tictgts2000.txt'
     
-    # Initialize the model class
     model = InsuranceModel(train_path, eval_path, target_path)
     
     # Chain the methods for loading data, preprocessing, training, and evaluation
     (model.load_data()
          .preprocess_data()
+         .handle_imbalance()
          .train_model()
          .evaluate_model()
-         .cross_validate_model())
-    
+         .save_model())
+
     # Perform EDA with a separate dataset copy
-    eda = DataExplorer(model.eda_data)
+    eda = DataExplorer(model.train_data)
     eda.explore_data().plot_histograms().plot_distribution('CARAVAN').plot_correlation_matrix()
 
 if __name__ == "__main__":
