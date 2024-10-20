@@ -3,14 +3,21 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split, cross_val_score, cross_validate, StratifiedKFold, RandomizedSearchCV
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import make_scorer, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from imblearn.over_sampling import SMOTE
 from xgboost import XGBClassifier
 import joblib
+import mlflow
+import mlflow.sklearn
+import os
 import re
+
+# Set up MLflow
+mlflow.set_experiment("Insurance Model Experiment")
+
+# Ensure models directory exists
+os.makedirs('models', exist_ok=True)
 
 # Class for data exploration
 class DataExplorer:
@@ -65,21 +72,19 @@ class InsuranceModel:
         with open('../docs/insurance+company+benchmark+coil+2000/dictionary.txt', 'r', encoding='ISO-8859-1') as file:
             file_content = file.read()
 
-        # Extract the Data Dictionary table using regular expressions
-        pattern = re.compile(r"(\d+)\s+([A-Z]+[A-Z0-9]*)\s+(.+?)(?=\d+\s+|L0:)", re.DOTALL)
+        # Extract the Data Dictionary table using updated regular expressions
+        pattern = re.compile(r"(\d+)\s+([A-Z]+[A-Z0-9]*)\s+(.+)")
         matches = pattern.findall(file_content)
 
         # Create a DataFrame from the matches
         df = pd.DataFrame(matches, columns=['Nr', 'Name', 'Description'])
 
-        # Exclude "CARAVAN" from the list of column names
+        # Use the column names as they are for train_data
         column_names = df['Name'].tolist()
-        if 'CARAVAN' in column_names:
-            column_names.remove('CARAVAN')
+        self.train_data.columns = column_names
 
-        # Assign column names to training and evaluation data
-        self.train_data.columns = column_names + ['CARAVAN']  # Include CARAVAN for the train_data
-        self.eval_data.columns = column_names  # Exclude CARAVAN from eval_data
+        # Assign columns for eval_data (without 'CARAVAN')
+        self.eval_data.columns = column_names[:-1]  # Exclude CARAVAN for eval_data
 
         return self
 
@@ -98,23 +103,43 @@ class InsuranceModel:
         return self
 
     def train_model(self):
-        # Initialize and train the XGBoost model
-        model = XGBClassifier()
-        model.fit(self.X_train, self.y_train)
-        self.model = model
-        return self
+        # Start MLflow logging
+        with mlflow.start_run():
+            model = XGBClassifier()
+            model.fit(self.X_train, self.y_train)
+            self.model = model
 
-    def evaluate_model(self):
-        predictions = self.model.predict(self.X_test)
-        print(f'Accuracy: {accuracy_score(self.y_test, predictions)}')
-        print(f'Precision: {precision_score(self.y_test, predictions)}')
-        print(f'Recall: {recall_score(self.y_test, predictions)}')
-        print(f'F1 Score: {f1_score(self.y_test, predictions)}')
+            # Log parameters
+            mlflow.log_param("model_type", "XGBoost")
+            
+            # Evaluate model
+            predictions = self.model.predict(self.X_test)
+            accuracy = accuracy_score(self.y_test, predictions)
+            precision = precision_score(self.y_test, predictions)
+            recall = recall_score(self.y_test, predictions)
+            f1 = f1_score(self.y_test, predictions)
+
+            # Log metrics
+            mlflow.log_metric("accuracy", accuracy)
+            mlflow.log_metric("precision", precision)
+            mlflow.log_metric("recall", recall)
+            mlflow.log_metric("f1_score", f1)
+
+            # Save the model with MLflow
+            mlflow.sklearn.log_model(self.model, "model")
+
+            print(f'Accuracy: {accuracy}')
+            print(f'Precision: {precision}')
+            print(f'Recall: {recall}')
+            print(f'F1 Score: {f1_score(self.y_test, predictions)}')
+
         return self
 
     def save_model(self):
-        joblib.dump(self.model, '../models/insurance_model.pkl')
-        print('Model saved successfully')
+        # Also save the model to the 'models' directory for DVC version control
+        model_path = os.path.join('../models/insurance_model.pkl')
+        joblib.dump(self.model, model_path)
+        print(f'Model saved successfully in {model_path}')
         return self
 
 def main():
@@ -129,7 +154,6 @@ def main():
          .preprocess_data()
          .handle_imbalance()
          .train_model()
-         .evaluate_model()
          .save_model())
 
     # Perform EDA with a separate dataset copy

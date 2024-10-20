@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/martinjaramillo/Documents/MLOps1/MLOps_Equipo29/notebooks/mlruns/840816789552086145/9ee41b62eb9c414584a266f65674ed32/artifacts
+end_time: 1729464632350
+entry_point_name: ''
+experiment_id: '840816789552086145'
+lifecycle_stage: active
+run_id: 9ee41b62eb9c414584a266f65674ed32
+run_name: secretive-foal-164
+run_uuid: 9ee41b62eb9c414584a266f65674ed32
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1729464629538
+status: 3
+tags: []
+user_id: martinjaramillo
