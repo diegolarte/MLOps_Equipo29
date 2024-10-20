@@ -17,7 +17,6 @@ import re
 mlflow.set_experiment("Insurance Model Experiment")
 
 # Ensure models directory exists
-os.makedirs('models', exist_ok=True)
 
 # Class for data exploration
 class DataExplorer:
@@ -137,7 +136,7 @@ class InsuranceModel:
 
     def save_model(self):
         # Also save the model to the 'models' directory for DVC version control
-        model_path = os.path.join('../models/insurance_model.pkl')
+        model_path = '../models/insurance_model.pkl'
         joblib.dump(self.model, model_path)
         print(f'Model saved successfully in {model_path}')
         return self

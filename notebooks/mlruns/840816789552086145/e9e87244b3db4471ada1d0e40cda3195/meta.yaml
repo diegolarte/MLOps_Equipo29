@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/martinjaramillo/Documents/MLOps1/MLOps_Equipo29/notebooks/mlruns/840816789552086145/e9e87244b3db4471ada1d0e40cda3195/artifacts
+end_time: 1729464905593
+entry_point_name: ''
+experiment_id: '840816789552086145'
+lifecycle_stage: active
+run_id: e9e87244b3db4471ada1d0e40cda3195
+run_name: treasured-mare-391
+run_uuid: e9e87244b3db4471ada1d0e40cda3195
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1729464903011
+status: 3
+tags: []
+user_id: martinjaramillo
