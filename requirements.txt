@@ -7,3 +7,6 @@ python-dotenv
 numpy
 pandas
 ucimlrepo
+scikit-learn
+imbalanced-learn
+xgboost
