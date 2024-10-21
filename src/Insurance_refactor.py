@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,6 +10,7 @@ from sklearn.metrics import make_scorer, accuracy_score, precision_score, recall
 from imblearn.over_sampling import SMOTE
 from xgboost import XGBClassifier
 import joblib
+import re
 
 # Class for data exploration
 class DataExplorer:
@@ -52,78 +54,74 @@ class InsuranceModel:
         self.eval_data = None
         self.target_data = None
         self.X_train, self.X_test, self.y_train, self.y_test = None, None, None, None
-        self.best_model = None
 
     def load_data(self):
+        # Load training, evaluation, and target data
         self.train_data = pd.read_csv(self.train_path, sep='\t', header=None)
         self.eval_data = pd.read_csv(self.eval_path, sep='\t', header=None)
         self.target_data = pd.read_csv(self.target_path, sep='\t', header=None, names=['Target'])
+
+        # Load and apply dictionary.txt for column names
+        with open('../docs/insurance+company+benchmark+coil+2000/dictionary.txt', 'r', encoding='ISO-8859-1') as file:
+            file_content = file.read()
+
+        # Extract the Data Dictionary table using regular expressions
+        pattern = re.compile(r"(\d+)\s+([A-Z]+[A-Z0-9]*)\s+(.+?)(?=\d+\s+|L0:)", re.DOTALL)
+        matches = pattern.findall(file_content)
+
+        # Create a DataFrame from the matches
+        df = pd.DataFrame(matches, columns=['Nr', 'Name', 'Description'])
+
+        # Exclude "CARAVAN" from the list of column names
+        column_names = df['Name'].tolist()
+        if 'CARAVAN' in column_names:
+            column_names.remove('CARAVAN')
+
+        # Assign column names to training and evaluation data
+        self.train_data.columns = column_names + ['CARAVAN']  # Include CARAVAN for the train_data
+        self.eval_data.columns = column_names  # Exclude CARAVAN from eval_data
+
         return self
 
     def preprocess_data(self):
-        # Preprocessing: Define features and target
-        X = self.train_data[['MAANTHUI', 'MGEMOMV', 'MGEMLEEF', 'MOSHOOFD', 'MGODRK', 'MGODPR',
-                             'MGODOV', 'MGODGE', 'MRELGE', 'MRELSA', 'MRELOV', 'MFALLEEN',
-                             'MFGEKIND', 'MFWEKIND', 'MOPLHOOG', 'MOPLMIDD', 'MOPLLAAG',
-                             'MBERHOOG', 'MBERZELF', 'MBERMIDD', 'holds_policy']]
+        # Assuming 'CARAVAN' is the target column
+        X = self.train_data.drop(columns=['CARAVAN'], errors='ignore')  # Adjust to avoid KeyError
         y = self.train_data['CARAVAN']
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, stratify=y)
+        
+        # Split data
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         return self
 
     def handle_imbalance(self):
-        # Apply SMOTE to handle class imbalance
-        smote = SMOTE(random_state=42)
-        self.X_train, self.y_train = smote.fit_resample(self.X_train, self.y_train)
+        sm = SMOTE(random_state=42)
+        self.X_train, self.y_train = sm.fit_resample(self.X_train, self.y_train)
         return self
 
     def train_model(self):
-        param_grid = {
-            'model__n_estimators': [100, 200, 300],
-            'model__max_depth': [3, 5, 7],
-            'model__learning_rate': [0.01, 0.05, 0.1],
-            'model__subsample': [0.6, 0.8, 1.0],
-            'model__colsample_bytree': [0.6, 0.8, 1.0],
-            'model__gamma': [0, 0.1, 0.2],
-            'model__scale_pos_weight': [1, 3, 5]
-        }
-        
-        pipeline = Pipeline(steps=[('smote', SMOTE(random_state=42)), ('model', XGBClassifier(random_state=42))])
-        
-        random_search = RandomizedSearchCV(estimator=pipeline, param_distributions=param_grid, n_iter=50,
-                                           scoring='roc_auc', cv=5, verbose=1, random_state=42, n_jobs=-1)
-        random_search.fit(self.X_train, self.y_train)
-        self.best_model = random_search.best_estimator_
-        print("Best parameters found: ", random_search.best_params_)
+        # Initialize and train the XGBoost model
+        model = XGBClassifier()
+        model.fit(self.X_train, self.y_train)
+        self.model = model
         return self
 
     def evaluate_model(self):
-        y_pred = self.best_model.predict(self.X_test)
-        y_pred_proba = self.best_model.predict_proba(self.X_test)[:, 1]
-        
-        accuracy = accuracy_score(self.y_test, y_pred)
-        precision = precision_score(self.y_test, y_pred)
-        recall = recall_score(self.y_test, y_pred)
-        f1 = f1_score(self.y_test, y_pred)
-        auc = roc_auc_score(self.y_test, y_pred_proba)
-        
-        print(f"Accuracy: {accuracy:.4f}")
-        print(f"Precision: {precision:.4f}")
-        print(f"Recall: {recall:.4f}")
-        print(f"F1-Score: {f1:.4f}")
-        print(f"AUC-ROC: {auc:.4f}")
+        predictions = self.model.predict(self.X_test)
+        print(f'Accuracy: {accuracy_score(self.y_test, predictions)}')
+        print(f'Precision: {precision_score(self.y_test, predictions)}')
+        print(f'Recall: {recall_score(self.y_test, predictions)}')
+        print(f'F1 Score: {f1_score(self.y_test, predictions)}')
         return self
 
-    def save_model(self, filename='xgboost_model.pkl'):
-        joblib.dump(self.best_model, filename)
-        print(f"Model saved as {filename}")
+    def save_model(self):
+        joblib.dump(self.model, '../models/insurance_model.pkl')
+        print('Model saved successfully')
         return self
 
-# Main execution function
 def main():
     train_path = '../data/raw/train/ticdata2000.txt'
     eval_path = '../data/raw/eval/ticeval2000.txt'
     target_path = '../data/raw/eval/tictgts2000.txt'
-    
+
     model = InsuranceModel(train_path, eval_path, target_path)
     
     # Chain the methods for loading data, preprocessing, training, and evaluation
