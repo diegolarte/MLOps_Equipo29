@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/martinjaramillo/Documents/MLOps1/MLOps_Equipo29/notebooks/mlruns/840816789552086145/a880990251354306a9298410c82a5e4b/artifacts
+end_time: 1729486027072
+entry_point_name: ''
+experiment_id: '840816789552086145'
+lifecycle_stage: active
+run_id: a880990251354306a9298410c82a5e4b
+run_name: likeable-skink-791
+run_uuid: a880990251354306a9298410c82a5e4b
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1729486019022
+status: 3
+tags: []
+user_id: martinjaramillo

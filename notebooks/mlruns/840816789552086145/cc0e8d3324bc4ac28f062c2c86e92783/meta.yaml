@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/martinjaramillo/Documents/MLOps1/MLOps_Equipo29/notebooks/mlruns/840816789552086145/cc0e8d3324bc4ac28f062c2c86e92783/artifacts
+end_time: 1729486470377
+entry_point_name: ''
+experiment_id: '840816789552086145'
+lifecycle_stage: active
+run_id: cc0e8d3324bc4ac28f062c2c86e92783
+run_name: peaceful-hawk-903
+run_uuid: cc0e8d3324bc4ac28f062c2c86e92783
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1729486459541
+status: 3
+tags: []
+user_id: martinjaramillo
