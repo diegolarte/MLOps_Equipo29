@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/Usuario/Documents/Master%20MNA/MLOps/Project/MLOps_Equipo29/notebooks/mlruns/631085963037292429/31ccefc4e11649ccbebcbb857d1bdc2d/artifacts
+end_time: 1729490987801
+entry_point_name: ''
+experiment_id: '631085963037292429'
+lifecycle_stage: active
+run_id: 31ccefc4e11649ccbebcbb857d1bdc2d
+run_name: whimsical-gnat-587
+run_uuid: 31ccefc4e11649ccbebcbb857d1bdc2d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1729490972295
+status: 3
+tags: []
+user_id: Usuario

@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1729490867769
+current_stage: None
+description: null
+last_updated_timestamp: 1729490867769
+name: decision_tree_model
+run_id: 7753cbc591dd4f46b48e27a9f80824c0
+run_link: null
+source: file:///C:/Users/Usuario/Documents/Master%20MNA/MLOps/Project/MLOps_Equipo29/notebooks/mlruns/631085963037292429/7753cbc591dd4f46b48e27a9f80824c0/artifacts/decision_tree_model
+status: READY
+status_message: null
+storage_location: file:///C:/Users/Usuario/Documents/Master%20MNA/MLOps/Project/MLOps_Equipo29/notebooks/mlruns/631085963037292429/7753cbc591dd4f46b48e27a9f80824c0/artifacts/decision_tree_model
+user_id: null
+version: 1
