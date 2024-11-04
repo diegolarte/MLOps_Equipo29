@@ -127,15 +127,24 @@ class InsuranceModel:
             )
             self.xgb_model.fit(self.X_train, self.y_train)
 
-            # Decision Tree model
-            self.dt_model = DecisionTreeClassifier(random_state=42)
+            # Decision Tree model with hyperparameters
+            self.dt_model = DecisionTreeClassifier(
+                max_depth=6, 
+                min_samples_split=5, 
+                random_state=42
+            )
             self.dt_model.fit(self.X_train, self.y_train)
 
-            # Logistic Regression model
-            self.lr_model = LogisticRegression(max_iter=2000, random_state=42)
+            # Logistic Regression model with hyperparameters
+            self.lr_model = LogisticRegression(
+                max_iter=2300, 
+                C=0.8, 
+                solver='lbfgs', 
+                random_state=42
+            )
             self.lr_model.fit(self.X_train, self.y_train)
 
-            # Log parameters
+            # Log parameters for all models
             mlflow.log_param("xgboost_model_type", "XGBoost")
             mlflow.log_param("decision_tree_model_type", "Decision Tree")
             mlflow.log_param("logistic_regression_model_type", "Logistic Regression")
@@ -161,11 +170,6 @@ class InsuranceModel:
             lr_recall = recall_score(self.y_test, lr_predictions)
             lr_f1 = f1_score(self.y_test, lr_predictions)
 
-            # Print the evaluation results
-            print(f"XGBoost - Accuracy: {xgb_accuracy}, Precision: {xgb_precision}, Recall: {xgb_recall}, F1 Score: {xgb_f1}")
-            print(f"Decision Tree - Accuracy: {dt_accuracy}, Precision: {dt_precision}, Recall: {dt_recall}, F1 Score: {dt_f1}")
-            print(f"Logistic Regression - Accuracy: {lr_accuracy}, Precision: {lr_precision}, Recall: {lr_recall}, F1 Score: {lr_f1}")
-
             # Log metrics for XGBoost
             mlflow.log_metric("xgb_accuracy", xgb_accuracy)
             mlflow.log_metric("xgb_precision", xgb_precision)
@@ -184,26 +188,22 @@ class InsuranceModel:
             mlflow.log_metric("lr_recall", lr_recall)
             mlflow.log_metric("lr_f1", lr_f1)
 
-            # Generate an input example from the test data
-            input_example = self.X_test[:5]
+            # Infer the model signature (input/output schema)
+            signature = infer_signature(self.X_test, xgb_predictions)
 
-            # Infer signatures for the models
-            xgb_signature = infer_signature(self.X_test, self.xgb_model.predict(self.X_test))
-            dt_signature = infer_signature(self.X_test, self.dt_model.predict(self.X_test))
-            lr_signature = infer_signature(self.X_test, self.lr_model.predict(self.X_test))
+            # Define input_example (using the first row of X_test as an example)
+            input_example = pd.DataFrame(self.X_test[:1], columns=self.train_data.columns[:-1])  # Exclude 'CARAVAN'
 
-            # Explicit pip requirements to avoid warnings
-            pip_requirements = ["scikit-learn==1.0.2", "cloudpickle==2.0.0", "xgboost==1.5.0"]
+            # Log the models to MLflow with input example
+            mlflow.sklearn.log_model(self.xgb_model, "xgb_model", input_example=input_example, signature=signature)
+            mlflow.sklearn.log_model(self.dt_model, "dt_model", input_example=input_example, signature=signature)
+            mlflow.sklearn.log_model(self.lr_model, "lr_model", input_example=input_example, signature=signature)
 
-            # Log models with signature, input example, and explicit pip requirements
-            mlflow.sklearn.log_model(self.xgb_model, "xgboost_model", signature=xgb_signature, input_example=input_example, pip_requirements=pip_requirements)
-            mlflow.sklearn.log_model(self.dt_model, "decision_tree_model", signature=dt_signature, input_example=input_example, pip_requirements=pip_requirements)
-            mlflow.sklearn.log_model(self.lr_model, "logistic_regression_model", signature=lr_signature, input_example=input_example, pip_requirements=pip_requirements)
 
         return self
 
     def save_model(self):
-        # Save each model separately
+        # Save each model locally
         xgb_model_path = '../models/xgb_model.pkl'
         dt_model_path = '../models/dt_model.pkl'
         lr_model_path = '../models/lr_model.pkl'

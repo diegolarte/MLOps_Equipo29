@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/martinjaramillo/Documents/MLOps1/MLOps_Equipo29/notebooks/mlruns/840816789552086145/178b35734e324059aad3fce4a8d59a41/artifacts
+end_time: 1729488053047
+entry_point_name: ''
+experiment_id: '840816789552086145'
+lifecycle_stage: active
+run_id: 178b35734e324059aad3fce4a8d59a41
+run_name: bedecked-wren-837
+run_uuid: 178b35734e324059aad3fce4a8d59a41
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1729488042376
+status: 3
+tags: []
+user_id: martinjaramillo
