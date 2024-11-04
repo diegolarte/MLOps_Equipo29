@@ -125,7 +125,7 @@ class InsuranceModel:
             mlflow.log_metric("f1_score", f1)
 
             # Save the model with MLflow
-            mlflow.sklearn.log_model(self.model, "model")
+            #mlflow.sklearn.log_model(self.model, "model")
 
             print(f'Accuracy: {accuracy}')
             print(f'Precision: {precision}')

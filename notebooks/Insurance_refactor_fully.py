@@ -118,21 +118,29 @@ class InsuranceModel:
         with mlflow.start_run():
             # Modified XGBoost model with hyperparameters
             self.xgb_model = XGBClassifier(
-                n_estimators=120,          # number of trees
-                learning_rate=0.3,         # step size shrinkage
-                max_depth=7,               # maximum depth of a tree
-                subsample=0.6,             # percentage of samples used per tree
-                colsample_bytree=0.9,      # percentage of features used per tree
+                n_estimators=150,          # number of trees
+                learning_rate=0.7,         # step size shrinkage
+                max_depth=4,               # maximum depth of a tree
+                subsample=0.9,             # percentage of samples used per tree
+                colsample_bytree=0.4,      # percentage of features used per tree
                 random_state=42
             )
             self.xgb_model.fit(self.X_train, self.y_train)
-
-            # Decision Tree model
-            self.dt_model = DecisionTreeClassifier(random_state=42)
+            # Decision Tree model with hyperparameters
+            self.dt_model = DecisionTreeClassifier(
+                max_depth=5, 
+                min_samples_split=7, 
+                random_state=42
+            )
             self.dt_model.fit(self.X_train, self.y_train)
 
-            # Logistic Regression model
-            self.lr_model = LogisticRegression(max_iter=2000, random_state=42)
+            # Logistic Regression model with hyperparameters
+            self.lr_model = LogisticRegression(
+                max_iter=3444, 
+                C=0.7, 
+                solver='newton-cg', 
+                random_state=42
+            )
             self.lr_model.fit(self.X_train, self.y_train)
 
             # Log parameters
@@ -192,13 +200,11 @@ class InsuranceModel:
             dt_signature = infer_signature(self.X_test, self.dt_model.predict(self.X_test))
             lr_signature = infer_signature(self.X_test, self.lr_model.predict(self.X_test))
 
-            # Explicit pip requirements to avoid warnings
-            pip_requirements = ["scikit-learn==1.0.2", "cloudpickle==2.0.0", "xgboost==1.5.0"]
 
             # Log models with signature, input example, and explicit pip requirements
-            mlflow.sklearn.log_model(self.xgb_model, "xgboost_model", signature=xgb_signature, input_example=input_example, pip_requirements=pip_requirements)
-            mlflow.sklearn.log_model(self.dt_model, "decision_tree_model", signature=dt_signature, input_example=input_example, pip_requirements=pip_requirements)
-            mlflow.sklearn.log_model(self.lr_model, "logistic_regression_model", signature=lr_signature, input_example=input_example, pip_requirements=pip_requirements)
+            mlflow.sklearn.log_model(sk_model=self.xgb_model,artifact_path= "xgboost_model",  signature=xgb_signature, registered_model_name="xgboost_model")
+            mlflow.sklearn.log_model(sk_model=self.dt_model, artifact_path="decision_tree_model", signature=dt_signature, registered_model_name="decision_tree_model")
+            mlflow.sklearn.log_model(sk_model=self.lr_model, artifact_path="logistic_regression_model",  signature=lr_signature, registered_model_name="logistic_regression_model")
 
         return self
 
