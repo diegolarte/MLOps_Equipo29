@@ -1,9 +1,32 @@
+# Code quality tools
 black
 flake8
 isort
-pip
+
+# Environment management
 python-dotenv
--e .
+
+# Core project dependencies
 numpy
 pandas
+scikit-learn
+imbalanced-learn
+xgboost
+
+# Add seaborn for visualization
+seaborn
+
+# Add python-multipart for form data handling
+python-multipart
+
+
+# API framework and dependencies
+fastapi
+uvicorn[standard]
+
+# ML tracking and serialization
+mlflow
+joblib
+
+# Dataset handling
 ucimlrepo
